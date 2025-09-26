@@ -19,6 +19,7 @@ contract Doomstake {
   address[] public stakers;
 
   mapping(address => Stake) public stakes;
+  mapping(address => bool) public isInStakersArray;
   uint256 public totalStaked;
   uint256 public totalActive;
   uint256 public feeCollected;
@@ -37,7 +38,11 @@ contract Doomstake {
 
     totalStaked += msg.value;
     totalActive += 1;
-    stakers.push(msg.sender);
+
+    if (!isInStakersArray[msg.sender]) {
+        stakers.push(msg.sender);
+        isInStakersArray[msg.sender] = true;
+    }
   }
 
 
@@ -63,6 +68,8 @@ contract Doomstake {
       }
       if (stakes[stakers[i]].timestamp < block.timestamp) {
         stakes[stakers[i]].active = false; // deactivate stake if time reached
+        delete stakers[i];
+        i--;
       }
     }
 
