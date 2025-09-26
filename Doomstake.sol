@@ -21,8 +21,8 @@ contract Doomstake {
   mapping(address => Stake) public stakes;
   mapping(address => bool) public isInStakersArray;
   uint256 public totalStaked;
-  uint256 public totalActive;
   uint256 public feeCollected;
+  uint256 public currentReward;
 
   uint8 public constant FEE_PERCENTAGE = 1; // 1% fee on stake slash
 
@@ -37,7 +37,6 @@ contract Doomstake {
     });
 
     totalStaked += msg.value;
-    totalActive += 1;
 
     if (!isInStakersArray[msg.sender]) {
         stakers.push(msg.sender);
@@ -50,38 +49,40 @@ contract Doomstake {
     // only creator can slash
     require(msg.sender == address(0x123), "Only creator can slash");
     require(totalStaked > 0, "No stakes to slash");
-    require(stakes[user].active, "No active stake to slash");
     require(block.timestamp < stakes[user].timestamp, "Stake time already reached");
+    require(stakes[user].active, "No active stake to slash");
 
     uint256 fee = (stakes[user].amount * FEE_PERCENTAGE) / 100;
     uint256 amountToSlash = stakes[user].amount - fee;
     feeCollected += fee;
-    totalStaked -= fee;
+    totalStaked -= fee + amountToSlash;
+    currentReward += amountToSlash;
+    delete stakes[user];
+  }
 
-    totalActive -= 1;
-
-    // Distribute slashed based on stake amount
+  function cleanup() external {
     for (uint256 i = 0; i < stakers.length; i++) {
-      if (stakes[stakers[i]].active && stakers[i] != user) {
-        uint256 reward = (amountToSlash * stakes[stakers[i]].amount) / totalStaked;
+      if (stakes[stakers[i]].active && stakes[stakers[i]].amount != 0) {
+        uint256 reward = (currentReward * stakes[stakers[i]].amount) / totalStaked;
         stakes[stakers[i]].amount += reward;
       }
       if (stakes[stakers[i]].timestamp < block.timestamp) {
         stakes[stakers[i]].active = false; // deactivate stake if time reached
-        delete stakers[i];
+        isInStakersArray[stakers[i]] = false;
+        // Remove ith element
+        stakers[i] = stakers[stakers.length -1];
+        stakers.pop();
         i--;
       }
     }
-
   }
 
   function withdraw() external {
-    require(stakes[msg.sender].active, "No active stake to withdraw");
+    require(!stakes[msg.sender].active, "Stake is still active");
     require(block.timestamp >= stakes[msg.sender].timestamp, "Stake time not yet reached");
 
     uint256 amount = stakes[msg.sender].amount;
     totalStaked -= amount;
-    totalActive -= 1;
 
     delete stakes[msg.sender];
 
