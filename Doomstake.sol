@@ -3,7 +3,7 @@
 // People stake ETH to use the app
 // If the app catches them using other apps more than a certain threshold, they lose their stake
 // If they use the app more than the threshold, they get their stake back plus a reward
-// rewards are funded by a small fee on each stake
+// rewards are funded by slashed stakes
 
 pragma solidity ^0.8.0;
 
@@ -51,12 +51,13 @@ contract Doomstake {
     uint256 fee = (stakes[user].amount * FEE_PERCENTAGE) / 100;
     uint256 amountToSlash = stakes[user].amount - fee;
     feeCollected += fee;
+    totalStaked -= fee;
 
     totalActive -= 1;
 
     // Distribute slashed based on stake amount
     for (uint256 i = 0; i < stakers.length; i++) {
-      if (stakes[stakers[i]].active) {
+      if (stakes[stakers[i]].active && stakers[i] != user) {
         uint256 reward = (amountToSlash * stakes[stakers[i]].amount) / totalStaked;
         stakes[stakers[i]].amount += reward;
       }
@@ -65,7 +66,6 @@ contract Doomstake {
       }
     }
 
-    delete stakes[user];
   }
 
   function withdraw() external {
