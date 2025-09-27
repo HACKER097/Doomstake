@@ -6,21 +6,12 @@
 set -e  # Exit on any error
 
 # Contract details
-CONTRACT_ADDRESS="0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e"
-RPC_URL="http://localhost:8545"  # Anvil default
+CONTRACT_ADDRESS="0x3F471b9Fe520c5B8dFe1D92d5f00A846429C797b"
+RPC_URL="https://testnet.evm.nodes.onflow.org"  
 
 # Account addresses and private keys
-CREATOR_ADDRESS="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
-CREATOR_PRIVATE_KEY="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-
-USER1_ADDRESS="0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
-USER1_PRIVATE_KEY="0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
-
-USER2_ADDRESS="0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
-USER2_PRIVATE_KEY="0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a"
-
-USER3_ADDRESS="0x90F79bf6EB2c4f870365E785982E1f101E93b906"
-USER3_PRIVATE_KEY="0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6"
+CREATOR_ADDRESS="0xd62596571E08A029279A78ac42F9135962ffa436"
+CREATOR_PRIVATE_KEY="71029672d47fd6c1584b284dd9dd5188f28a487cbb941ec6645b274c15e30fa3"
 
 # Colors for output
 RED='\033[0;31m'
@@ -47,6 +38,34 @@ print_error() {
 print_info() {
     echo -e "${YELLOW}ℹ $1${NC}"
 }
+
+# Create and fund user accounts
+print_header "Creating and Funding User Accounts"
+
+# User 1
+USER1_DATA=$(cast wallet new)
+USER1_ADDRESS=$(echo "$USER1_DATA" | grep "Address" | awk '{print $2}')
+USER1_PRIVATE_KEY=$(echo "$USER1_DATA" | grep "Private key" | awk '{print $3}')
+print_info "User 1 Address: $USER1_ADDRESS"
+cast send --private-key $CREATOR_PRIVATE_KEY --rpc-url $RPC_URL $USER1_ADDRESS --value 10ether
+print_success "Funded User 1 with 10 ETH"
+
+# User 2
+USER2_DATA=$(cast wallet new)
+USER2_ADDRESS=$(echo "$USER2_DATA" | grep "Address" | awk '{print $2}')
+USER2_PRIVATE_KEY=$(echo "$USER2_DATA" | grep "Private key" | awk '{print $3}')
+print_info "User 2 Address: $USER2_ADDRESS"
+cast send --private-key $CREATOR_PRIVATE_KEY --rpc-url $RPC_URL $USER2_ADDRESS --value 10ether
+print_success "Funded User 2 with 10 ETH"
+
+# User 3
+USER3_DATA=$(cast wallet new)
+USER3_ADDRESS=$(echo "$USER3_DATA" | grep "Address" | awk '{print $2}')
+USER3_PRIVATE_KEY=$(echo "$USER3_DATA" | grep "Private key" | awk '{print $3}')
+print_info "User 3 Address: $USER3_ADDRESS"
+cast send --private-key $CREATOR_PRIVATE_KEY --rpc-url $RPC_URL $USER3_ADDRESS --value 10ether
+print_success "Funded User 3 with 10 ETH"
+
 
 # Function to get contract state
 get_contract_state() {
@@ -84,7 +103,7 @@ print_success "Initial state retrieved"
 print_header "Test 2: User1 Stakes 1 ETH"
 print_info "User1 balance before staking: $(get_eth_balance $USER1_ADDRESS)"
 
-STAKE_TIME=3600  # 1 hour
+STAKE_TIME=120
 STAKE_AMOUNT="1000000000000000000"  # 1 ETH in wei
 
 cast send $CONTRACT_ADDRESS "stake(uint256)" $STAKE_TIME \
@@ -135,7 +154,7 @@ cast send $CONTRACT_ADDRESS "stake(uint256)" $STAKE_TIME \
     --rpc-url $RPC_URL 2>/dev/null
 
 if [ $? -eq 0 ]; then
-    print_error "Double staking should have failed but didn't"
+    print_error "Double staking should have failed but didn\'t"
 else
     print_success "Double staking correctly failed"
 fi
@@ -160,7 +179,7 @@ cast send $CONTRACT_ADDRESS "slash(address)" $USER2_ADDRESS \
     --rpc-url $RPC_URL 2>/dev/null
 
 if [ $? -eq 0 ]; then
-    print_error "Non-creator slash should have failed but didn't"
+    print_error "Non-creator slash should have failed but didn\'t"
 else
     print_success "Non-creator slash correctly failed"
 fi
@@ -181,13 +200,9 @@ get_contract_state $USER3_ADDRESS
 # Test 9: Wait for stake time to pass (simulate time passage)
 print_header "Test 9: Simulating Time Passage"
 print_info "In a real scenario, we would wait for the stake time to pass..."
-print_info "For testing purposes, we'll use anvil_mine to advance time"
+print_info "For testing purposes, just wait a bit and press enter"
 
-# Advance time by 2 hours (7200 seconds)
-cast rpc anvil_increaseTime 7200 --rpc-url $RPC_URL > /dev/null
-cast rpc anvil_mine 1 --rpc-url $RPC_URL > /dev/null
-
-print_success "Time advanced by 2 hours"
+read -p "Press enter to continue..."
 
 # Test 10: Run cleanup again to deactivate expired stakes
 print_header "Test 10: Final Cleanup"
@@ -242,7 +257,7 @@ cast send $CONTRACT_ADDRESS "withdraw()" \
     --rpc-url $RPC_URL 2>/dev/null
 
 if [ $? -eq 0 ]; then
-    print_error "Invalid withdrawal should have failed but didn't"
+    print_error "Invalid withdrawal should have failed but didn\'t"
 else
     print_success "Invalid withdrawal correctly failed"
 fi
