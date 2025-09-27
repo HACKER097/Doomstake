@@ -11,7 +11,7 @@ pragma solidity ^0.8.0;
 contract Doomstake {
 
   // Creator address
-  address public creator = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
+  address public creator = address(0xd62596571E08A029279A78ac42F9135962ffa436);
 
   struct Stake {
     uint256 amount;
